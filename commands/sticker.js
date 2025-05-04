@@ -68,9 +68,12 @@ async function stickerCommand(sock, chatId, message) {
         // Write media to temp file
         fs.writeFileSync(tempInput, mediaBuffer);
 
-        // Convert to WebP using ffmpeg with optimized settings
-        const isAnimated = mediaMessage.mimetype?.includes('gif') || mediaMessage.seconds > 0;
-        
+        // Check if media is animated (GIF or video)
+        const isAnimated = mediaMessage.mimetype?.includes('gif') || 
+                          mediaMessage.mimetype?.includes('video') || 
+                          mediaMessage.seconds > 0;
+
+        // Convert to WebP using ffmpeg with optimized settings for animated/non-animated
         const ffmpegCommand = isAnimated
             ? `ffmpeg -i "${tempInput}" -vf "scale=512:512:force_original_aspect_ratio=decrease,fps=15,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 75 -compression_level 6 "${tempOutput}"`
             : `ffmpeg -i "${tempInput}" -vf "scale=512:512:force_original_aspect_ratio=decrease,format=rgba,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 75 -compression_level 6 "${tempOutput}"`;
