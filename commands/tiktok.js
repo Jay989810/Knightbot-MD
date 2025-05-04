@@ -40,6 +40,7 @@ async function tiktokCommand(sock, chatId, message) {
         const tiktokPatterns = [
             /https?:\/\/(?:www\.)?tiktok\.com\//,
             /https?:\/\/(?:vm\.)?tiktok\.com\//,
+            /https?:\/\/(?:vt\.)?tiktok\.com\//,
             /https?:\/\/(?:www\.)?tiktok\.com\/@/,
             /https?:\/\/(?:www\.)?tiktok\.com\/t\//
         ];

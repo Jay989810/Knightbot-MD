@@ -1,17 +1,5 @@
 const os = require('os');
-
-async function pingCommand(sock, chatId) {
-    try {
-        const start = Date.now();
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const end = Date.now();
-        const ping = Math.round(end - start);
-        await sock.sendMessage(chatId, { text: `𝗣𝗼𝗻𝗴\n${ping} 𝗠𝘀` });
-    } catch (error) {
-        console.error('Error in ping command:', error);
-        await sock.sendMessage(chatId, { text: 'Failed to get ping status.' });
-    }
-}
+const settings = require('../settings.js');
 
 function formatTime(seconds) {
     const days = Math.floor(seconds / (24 * 60 * 60));
@@ -25,9 +13,34 @@ function formatTime(seconds) {
     if (days > 0) time += `${days}d `;
     if (hours > 0) time += `${hours}h `;
     if (minutes > 0) time += `${minutes}m `;
-    if (seconds > 0) time += `${seconds}s`;
+    if (seconds > 0 || time === '') time += `${seconds}s`;
 
     return time.trim();
+}
+
+async function pingCommand(sock, chatId) {
+    try {
+        const start = Date.now();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const end = Date.now();
+        const ping = Math.round(end - start);
+
+        const uptimeInSeconds = process.uptime(); // process uptime in seconds
+        const uptimeFormatted = formatTime(uptimeInSeconds);
+
+        const botInfo = `
+┏━━〔 🤖 𝐊𝐧𝐢𝐠𝐡𝐭𝐁𝐨𝐭-𝐌𝐃 〕━━┓
+┃ 🚀 Ping     : ${ping} ms
+┃ ⏱️ Uptime   : ${uptimeFormatted}
+┃ 🔖 Version  : v${settings.version}
+┗━━━━━━━━━━━━━━━━━━━┛`.trim();
+
+        await sock.sendMessage(chatId, { text: botInfo });
+
+    } catch (error) {
+        console.error('Error in ping command:', error);
+        await sock.sendMessage(chatId, { text: '❌ Failed to get bot status.' });
+    }
 }
 
 module.exports = pingCommand;

@@ -1,7 +1,8 @@
+const settings = require("../settings");
 async function aliveCommand(sock, chatId) {
     try {
         const message = `*🤖 Knight Bot is Active!*\n\n` +
-                       `*Version:* 1.0.0\n` +
+                       `*Version:* ${settings.version}\n` +
                        `*Status:* Online\n` +
                        `*Mode:* Public\n\n` +
                        `*🌟 Features:*\n` +
@@ -14,7 +15,7 @@ async function aliveCommand(sock, chatId) {
         await sock.sendMessage(chatId, {
             text: message,
             contextInfo: {
-                forwardingScore: 1,
+                forwardingScore: 999,
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: '120363161513685998@newsletter',

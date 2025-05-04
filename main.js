@@ -9,6 +9,7 @@ const ytdl = require('ytdl-core');
 const path = require('path');
 const axios = require('axios');
 const ffmpeg = require('fluent-ffmpeg');
+const { addWelcome, delWelcome, isWelcomeOn, addGoodbye, delGoodBye, isGoodByeOn } = require('./lib/index');
 
 // Command imports
 const tagAllCommand = require('./commands/tagall');
@@ -745,24 +746,87 @@ async function handleMessages(sock, messageUpdate, printLog) {
     }
 }
 
+async function handleGroupParticipantUpdate(sock, update) {
+    try {
+        const { id, participants, action, author } = update;
+        
+        // Debug log for group updates
+       /* console.log('Group Update in Main:', {
+            id,
+            participants,
+            action,
+            author
+        });*/
+
+        // Check if it's a group
+        if (!id.endsWith('@g.us')) return;
+
+        // Handle promotion events
+        if (action === 'promote') {
+            await handlePromotionEvent(sock, id, participants, author);
+            return;
+        }
+        
+        // Handle demotion events
+        if (action === 'demote') {
+            await handleDemotionEvent(sock, id, participants, author);
+            return;
+        }
+
+        // Handle join events
+        if (action === 'add') {
+            // Check if welcome is enabled for this group
+            const isWelcomeEnabled = await isWelcomeOn(id);
+            if (!isWelcomeEnabled) return;
+
+            // Get welcome message from data
+            const data = JSON.parse(fs.readFileSync('./data/userGroupData.json'));
+            const welcomeData = data.welcome[id];
+            const welcomeMessage = welcomeData?.message || 'Welcome {user} to the group! 🎉';
+
+            // Send welcome message for each new participant
+            for (const participant of participants) {
+                const user = participant.split('@')[0];
+                const formattedMessage = welcomeMessage.replace('{user}', `@${user}`);
+                
+                await sock.sendMessage(id, {
+                    text: formattedMessage,
+                    mentions: [participant]
+                });
+            }
+        }
+        
+        // Handle leave events
+        if (action === 'remove') {
+            // Check if goodbye is enabled for this group
+            const isGoodbyeEnabled = await isGoodByeOn(id);
+            if (!isGoodbyeEnabled) return;
+
+            // Get goodbye message from data
+            const data = JSON.parse(fs.readFileSync('./data/userGroupData.json'));
+            const goodbyeData = data.goodbye[id];
+            const goodbyeMessage = goodbyeData?.message || 'Goodbye {user} 👋';
+
+            // Send goodbye message for each leaving participant
+            for (const participant of participants) {
+                const user = participant.split('@')[0];
+                const formattedMessage = goodbyeMessage.replace('{user}', `@${user}`);
+                
+                await sock.sendMessage(id, {
+                    text: formattedMessage,
+                    mentions: [participant]
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error in handleGroupParticipantUpdate:', error);
+    }
+}
+
 // Instead, export the handlers along with handleMessages
 module.exports = {
     handleMessages,
-    handleGroupParticipantUpdate: async (sock, update) => {
-        const { id, participants, action, author } = update;
-        /*  console.log('Group Update in Main:', {
-              id,
-              participants,
-              action,
-              author
-          }); */ // Add this debug log
-
-        if (action === 'promote') {
-            await handlePromotionEvent(sock, id, participants, author);
-        } else if (action === 'demote') {
-            await handleDemotionEvent(sock, id, participants, author);
-        }
-    },
+    handleGroupParticipantUpdate,
     handleStatus: async (sock, status) => {
         await handleStatusUpdate(sock, status);
     }

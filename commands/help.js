@@ -32,18 +32,7 @@ async function helpCommand(sock, chatId, channelLink) {
 ║ ➤ .staff or .admins 
 ║ ➤ .vv
 ║ ➤ .pair or .rent
-╚═══════════════════╝
-
-╔═══════════════════╗
-🎨 *Image/Sticker Commands*:
-║ ➤ .blur <image>
-║ ➤ .simage <reply to sticker>
-║ ➤ .sticker <reply to image>
-║ ➤ .tgsticker <Link>
-║ ➤ .meme
-║ ➤ .take <packname> 
-║ ➤ .emojimix <emj1>+<emj2>
-╚═══════════════════╝   
+╚═══════════════════╝ 
 
 ╔═══════════════════╗
 🛠️ *Admin Commands*:
@@ -76,13 +65,15 @@ async function helpCommand(sock, chatId, channelLink) {
 ╚═══════════════════╝
 
 ╔═══════════════════╗
-🔗 *Github Commands:*
-║ ➤ .git
-║ ➤ .github
-║ ➤ .sc
-║ ➤ .script
-║ ➤ .repo
-╚═══════════════════╝
+🎨 *Image/Sticker Commands*:
+║ ➤ .blur <image>
+║ ➤ .simage <reply to sticker>
+║ ➤ .sticker <reply to image>
+║ ➤ .tgsticker <Link>
+║ ➤ .meme
+║ ➤ .take <packname> 
+║ ➤ .emojimix <emj1>+<emj2>
+╚═══════════════════╝  
 
 ╔═══════════════════╗
 🎮 *Game Commands*:
@@ -142,6 +133,15 @@ async function helpCommand(sock, chatId, channelLink) {
 ║ ➤ .instagram <link>
 ║ ➤ .facebook <link>
 ║ ➤ .tiktok <link>
+╚═══════════════════╝
+
+╔═══════════════════╗
+🔗 *Github Commands:*
+║ ➤ .git
+║ ➤ .github
+║ ➤ .sc
+║ ➤ .script
+║ ➤ .repo
 ╚═══════════════════╝
 
 Join our channel for updates:`;
