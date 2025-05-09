@@ -13,6 +13,46 @@ if (!fs.existsSync(TEMP_MEDIA_DIR)) {
     fs.mkdirSync(TEMP_MEDIA_DIR, { recursive: true });
 }
 
+// Function to get folder size in MB
+const getFolderSizeInMB = (folderPath) => {
+    try {
+        const files = fs.readdirSync(folderPath);
+        let totalSize = 0;
+
+        for (const file of files) {
+            const filePath = path.join(folderPath, file);
+            if (fs.statSync(filePath).isFile()) {
+                totalSize += fs.statSync(filePath).size;
+            }
+        }
+
+        return totalSize / (1024 * 1024); // Convert bytes to MB
+    } catch (err) {
+        console.error('Error getting folder size:', err);
+        return 0;
+    }
+};
+
+// Function to clean temp folder if size exceeds 10MB
+const cleanTempFolderIfLarge = () => {
+    try {
+        const sizeMB = getFolderSizeInMB(TEMP_MEDIA_DIR);
+        
+        if (sizeMB > 100) {
+            const files = fs.readdirSync(TEMP_MEDIA_DIR);
+            for (const file of files) {
+                const filePath = path.join(TEMP_MEDIA_DIR, file);
+                fs.unlinkSync(filePath);
+            }
+        }
+    } catch (err) {
+        console.error('Temp cleanup error:', err);
+    }
+};
+
+// Start periodic cleanup check every 1 minute
+setInterval(cleanTempFolderIfLarge, 60 * 1000);
+
 // Load config
 function loadAntideleteConfig() {
     try {
@@ -61,6 +101,9 @@ async function handleAntideleteCommand(sock, chatId, message, match) {
 // Store incoming messages
 async function storeMessage(message) {
     try {
+        const config = loadAntideleteConfig();
+        if (!config.enabled) return; // Don't store if antidelete is disabled
+
         if (!message.key?.id) return;
 
         const messageId = message.key.id;

@@ -87,6 +87,9 @@ const playCommand = require('./commands/play');
 const tiktokCommand = require('./commands/tiktok');
 const songCommand = require('./commands/song');
 const aiCommand = require('./commands/ai');
+const { handleTranslateCommand } = require('./commands/translate');
+const { handleSsCommand } = require('./commands/ss');
+const { addCommandReaction, handleAreactCommand } = require('./lib/reactions');
 
 
 // Global settings
@@ -134,6 +137,10 @@ async function handleMessages(sock, messageUpdate, printLog) {
         let userMessage = message.message?.conversation?.trim().toLowerCase() ||
             message.message?.extendedTextMessage?.text?.trim().toLowerCase() || '';
         userMessage = userMessage.replace(/\.\s+/g, '.').trim();
+
+        // Preserve raw message for commands like .tag that need original casing
+        const rawText = message.message?.conversation?.trim() ||
+            message.message?.extendedTextMessage?.text?.trim() || '';
 
         // Only log command usage
         if (userMessage.startsWith('.')) {
@@ -190,7 +197,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
         const isAdminCommand = adminCommands.some(cmd => userMessage.startsWith(cmd));
 
         // List of owner commands
-        const ownerCommands = ['.mode', '.autostatus', '.antidelete', '.cleartmp', '.setpp', '.clearsession'];
+        const ownerCommands = ['.mode', '.autostatus', '.antidelete', '.cleartmp', '.setpp', '.clearsession', '.areact', '.autoreact'];
         const isOwnerCommand = ownerCommands.some(cmd => userMessage.startsWith(cmd));
 
         let isSenderAdmin = false;
@@ -364,7 +371,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 }
                 break;
             case userMessage.startsWith('.tag'):
-                const messageText = userMessage.slice(4).trim();
+                const messageText = rawText.slice(4).trim();  // use rawText here, not userMessage
                 const replyMessage = message.message?.extendedTextMessage?.contextInfo?.quotedMessage || null;
                 await tagCommand(sock, chatId, senderId, messageText, replyMessage);
                 break;
@@ -561,10 +568,10 @@ async function handleMessages(sock, messageUpdate, printLog) {
                     return;
                 }
 
-                // Check if sender is admin
+                // Check if sender is admin or bot owner
                 const chatbotAdminStatus = await isAdmin(sock, chatId, senderId);
-                if (!chatbotAdminStatus.isSenderAdmin) {
-                    await sock.sendMessage(chatId, { text: '*Only admins can use this command*', ...channelInfo });
+                if (!chatbotAdminStatus.isSenderAdmin && !message.key.fromMe) {
+                    await sock.sendMessage(chatId, { text: '*Only admins or bot owner can use this command*', ...channelInfo });
                     return;
                 }
 
@@ -723,6 +730,18 @@ async function handleMessages(sock, messageUpdate, printLog) {
             case userMessage.startsWith('.gpt') || userMessage.startsWith('.gemini'):
                 await aiCommand(sock, chatId, message);
                 break;
+            case userMessage.startsWith('.translate') || userMessage.startsWith('.trt'):
+                const commandLength = userMessage.startsWith('.translate') ? 10 : 4;
+                await handleTranslateCommand(sock, chatId, message, userMessage.slice(commandLength));
+                return;
+            case userMessage.startsWith('.ss') || userMessage.startsWith('.ssweb') || userMessage.startsWith('.screenshot'):
+                const ssCommandLength = userMessage.startsWith('.screenshot') ? 11 : (userMessage.startsWith('.ssweb') ? 6 : 3);
+                await handleSsCommand(sock, chatId, message, userMessage.slice(ssCommandLength).trim());
+                break;
+            case userMessage.startsWith('.areact') || userMessage.startsWith('.autoreact') || userMessage.startsWith('.autoreaction'):
+                const isOwner = message.key.fromMe;
+                await handleAreactCommand(sock, chatId, message, isOwner);
+                break;
             default:
                 if (isGroup) {
                     // Handle non-command group messages
@@ -733,6 +752,11 @@ async function handleMessages(sock, messageUpdate, printLog) {
                     await handleBadwordDetection(sock, chatId, message, userMessage, senderId);
                 }
                 break;
+        }
+
+        if (userMessage.startsWith('.')) {
+            // After command is processed successfully
+            await addCommandReaction(sock, message);
         }
     } catch (error) {
         console.error('❌ Error in message handler:', error.message);
@@ -749,14 +773,14 @@ async function handleMessages(sock, messageUpdate, printLog) {
 async function handleGroupParticipantUpdate(sock, update) {
     try {
         const { id, participants, action, author } = update;
-        
+
         // Debug log for group updates
-       /* console.log('Group Update in Main:', {
-            id,
-            participants,
-            action,
-            author
-        });*/
+        /* console.log('Group Update in Main:', {
+             id,
+             participants,
+             action,
+             author
+         });*/
 
         // Check if it's a group
         if (!id.endsWith('@g.us')) return;
@@ -766,7 +790,7 @@ async function handleGroupParticipantUpdate(sock, update) {
             await handlePromotionEvent(sock, id, participants, author);
             return;
         }
-        
+
         // Handle demotion events
         if (action === 'demote') {
             await handleDemotionEvent(sock, id, participants, author);
@@ -788,14 +812,14 @@ async function handleGroupParticipantUpdate(sock, update) {
             for (const participant of participants) {
                 const user = participant.split('@')[0];
                 const formattedMessage = welcomeMessage.replace('{user}', `@${user}`);
-                
+
                 await sock.sendMessage(id, {
                     text: formattedMessage,
                     mentions: [participant]
                 });
             }
         }
-        
+
         // Handle leave events
         if (action === 'remove') {
             // Check if goodbye is enabled for this group
@@ -811,7 +835,7 @@ async function handleGroupParticipantUpdate(sock, update) {
             for (const participant of participants) {
                 const user = participant.split('@')[0];
                 const formattedMessage = goodbyeMessage.replace('{user}', `@${user}`);
-                
+
                 await sock.sendMessage(id, {
                     text: formattedMessage,
                     mentions: [participant]

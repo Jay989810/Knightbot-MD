@@ -18,14 +18,14 @@ function formatTime(seconds) {
     return time.trim();
 }
 
-async function pingCommand(sock, chatId) {
+async function pingCommand(sock, chatId, message) {
     try {
         const start = Date.now();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await sock.sendMessage(chatId, { text: 'Pong!' });
         const end = Date.now();
-        const ping = Math.round(end - start);
+        const ping = Math.round((end - start) / 2);
 
-        const uptimeInSeconds = process.uptime(); // process uptime in seconds
+        const uptimeInSeconds = process.uptime();
         const uptimeFormatted = formatTime(uptimeInSeconds);
 
         const botInfo = `
@@ -35,7 +35,8 @@ async function pingCommand(sock, chatId) {
 ┃ 🔖 Version  : v${settings.version}
 ┗━━━━━━━━━━━━━━━━━━━┛`.trim();
 
-        await sock.sendMessage(chatId, { text: botInfo });
+        // Reply to the original message with the bot info
+        await sock.sendMessage(chatId, { text: botInfo, quoted: message });
 
     } catch (error) {
         console.error('Error in ping command:', error);
