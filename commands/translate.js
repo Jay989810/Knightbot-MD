@@ -42,22 +42,60 @@ async function handleTranslateCommand(sock, chatId, message, match) {
             });
         }
 
-        // Call the API
-        const response = await fetch(`https://xploader-apis-5f424ea8f0da.herokuapp.com/translate?text=${encodeURIComponent(textToTranslate)}&lang=${lang}`);
-        
-        if (!response.ok) {
-            throw new Error(`API responded with status: ${response.status}`);
+        // Try multiple translation APIs in sequence
+        let translatedText = null;
+        let error = null;
+
+        // Try API 1 (Google Translate API)
+        try {
+            const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(textToTranslate)}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data[0] && data[0][0] && data[0][0][0]) {
+                    translatedText = data[0][0][0];
+                }
+            }
+        } catch (e) {
+            error = e;
         }
 
-        const data = await response.json();
+        // If API 1 fails, try API 2
+        if (!translatedText) {
+            try {
+                const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textToTranslate)}&langpair=auto|${lang}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.responseData && data.responseData.translatedText) {
+                        translatedText = data.responseData.translatedText;
+                    }
+                }
+            } catch (e) {
+                error = e;
+            }
+        }
 
-        if (!data || !data.translated) {
-            throw new Error('Invalid API response');
+        // If API 2 fails, try API 3
+        if (!translatedText) {
+            try {
+                const response = await fetch(`https://api.dreaded.site/api/translate?text=${encodeURIComponent(textToTranslate)}&lang=${lang}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.translated) {
+                        translatedText = data.translated;
+                    }
+                }
+            } catch (e) {
+                error = e;
+            }
+        }
+
+        if (!translatedText) {
+            throw new Error('All translation APIs failed');
         }
 
         // Send translation
         await sock.sendMessage(chatId, {
-            text: `${data.translated}`,
+            text: `${translatedText}`,
         }, {
             quoted: message
         });
@@ -65,7 +103,7 @@ async function handleTranslateCommand(sock, chatId, message, match) {
     } catch (error) {
         console.error('❌ Error in translate command:', error);
         await sock.sendMessage(chatId, {
-            text: '❌ Failed to translate text. Please check the format and try again.\n\nUsage:\n1. Reply to a message with: .translate <lang> or .trt <lang>\n2. Or type: .translate <text> <lang> or .trt <text> <lang>',
+            text: '❌ Failed to translate text. Please try again later.\n\nUsage:\n1. Reply to a message with: .translate <lang> or .trt <lang>\n2. Or type: .translate <text> <lang> or .trt <text> <lang>',
             quoted: message
         });
     }
