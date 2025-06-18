@@ -10,12 +10,22 @@ async function stickerCommand(sock, chatId, message) {
     let mediaMessage;
 
     if (message.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-        const quotedMessage = message.message.extendedTextMessage.contextInfo.quotedMessage;
-        mediaMessage = quotedMessage.imageMessage || quotedMessage.videoMessage || quotedMessage.documentMessage;
-        message = { message: quotedMessage };
+        const quoted = message.message.extendedTextMessage.contextInfo;
+        mediaMessage = quoted.quotedMessage.imageMessage || quoted.quotedMessage.videoMessage || quoted.quotedMessage.documentMessage;
+    
+        message = {
+            key: {
+                remoteJid: chatId,
+                fromMe: false,
+                id: quoted.stanzaId,
+                participant: quoted.participant || chatId
+            },
+            message: quoted.quotedMessage
+        };
     } else {
         mediaMessage = message.message?.imageMessage || message.message?.videoMessage || message.message?.documentMessage;
     }
+    
 
     if (!mediaMessage) {
         await sock.sendMessage(chatId, { 
@@ -29,7 +39,7 @@ async function stickerCommand(sock, chatId, message) {
                     serverMessageId: -1
                 }
             }
-        });
+        },{ quoted: message });
         return;
     }
 
@@ -116,7 +126,7 @@ async function stickerCommand(sock, chatId, message) {
         // Send the sticker
         await sock.sendMessage(chatId, { 
             sticker: finalBuffer
-        });
+        },{ quoted: message });
 
         // Cleanup temp files
         try {

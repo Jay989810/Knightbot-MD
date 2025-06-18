@@ -2,11 +2,11 @@ const settings = require('../settings');
 const fs = require('fs');
 const path = require('path');
 
-async function helpCommand(sock, chatId, channelLink) {
+async function helpCommand(sock, chatId, message) {
     const helpMessage = `
 ╔═══════════════════╗
    *🤖 ${settings.botName || 'KnightBot-MD'}*  
-   Version: *${settings.version || '1.0.0'}*
+   Version: *${settings.version || '2.0.2'}*
    by ${settings.botOwner || 'Mr Unique Hacker'}
    YT : ${global.ytch}
 ╚═══════════════════╝
@@ -31,9 +31,9 @@ async function helpCommand(sock, chatId, channelLink) {
 ║ ➤ .groupinfo
 ║ ➤ .staff or .admins 
 ║ ➤ .vv
-║ ➤ .pair or .rent
 ║ ➤ .trt <text> <lang>
 ║ ➤ .ss <link>
+║ ➤ .jid
 ╚═══════════════════╝ 
 
 ╔═══════════════════╗
@@ -54,6 +54,8 @@ async function helpCommand(sock, chatId, channelLink) {
 ║ ➤ .tagall
 ║ ➤ .chatbot
 ║ ➤ .resetlink
+║ ➤ .welcome <on/off>
+║ ➤ .goodbye <on/off>
 ╚═══════════════════╝
 
 ╔═══════════════════╗
@@ -93,6 +95,8 @@ async function helpCommand(sock, chatId, channelLink) {
 🤖 *AI Commands*:
 ║ ➤ .gpt <question>
 ║ ➤ .gemini <question>
+║ ➤ .imagine <prompt>
+║ ➤ .flux <prompt>
 ╚═══════════════════╝
 
 ╔═══════════════════╗
@@ -166,11 +170,11 @@ Join our channel for updates:`;
                     isForwarded: true,
                     forwardedNewsletterMessageInfo: {
                         newsletterJid: '120363161513685998@newsletter',
-                        newsletterName: 'KnightBot MD by Mr Unique Hacker',
+                        newsletterName: 'KnightBot MD',
                         serverMessageId: -1
                     }
                 }
-            });
+            },{ quoted: message });
         } else {
             console.error('Bot image not found at:', imagePath);
             await sock.sendMessage(chatId, { 
