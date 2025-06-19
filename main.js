@@ -805,14 +805,6 @@ async function handleGroupParticipantUpdate(sock, update) {
     try {
         const { id, participants, action, author } = update;
 
-        // Debug log for group updates
-        /* console.log('Group Update in Main:', {
-             id,
-             participants,
-             action,
-             author
-         });*/
-
         // Check if it's a group
         if (!id.endsWith('@g.us')) return;
 
@@ -834,19 +826,37 @@ async function handleGroupParticipantUpdate(sock, update) {
             const isWelcomeEnabled = await isWelcomeOn(id);
             if (!isWelcomeEnabled) return;
 
+            // Get group metadata
+            const groupMetadata = await sock.groupMetadata(id);
+            const groupName = groupMetadata.subject;
+            const groupDesc = groupMetadata.desc || 'No description available';
+
             // Get welcome message from data
             const data = JSON.parse(fs.readFileSync('./data/userGroupData.json'));
             const welcomeData = data.welcome[id];
             const welcomeMessage = welcomeData?.message || 'Welcome {user} to the group! 🎉';
+            const channelId = welcomeData?.channelId || '120363161513685998@newsletter';
 
             // Send welcome message for each new participant
             for (const participant of participants) {
                 const user = participant.split('@')[0];
-                const formattedMessage = welcomeMessage.replace('{user}', `@${user}`);
+                const formattedMessage = welcomeMessage
+                    .replace('{user}', `@${user}`)
+                    .replace('{group}', groupName)
+                    .replace('{description}', groupDesc);
 
                 await sock.sendMessage(id, {
                     text: formattedMessage,
-                    mentions: [participant]
+                    mentions: [participant],
+                    contextInfo: {
+                        forwardingScore: 1,
+                        isForwarded: true,
+                        forwardedNewsletterMessageInfo: {
+                            newsletterJid: channelId,
+                            newsletterName: 'KnightBot MD',
+                            serverMessageId: -1
+                        }
+                    }
                 });
             }
         }
@@ -857,19 +867,35 @@ async function handleGroupParticipantUpdate(sock, update) {
             const isGoodbyeEnabled = await isGoodByeOn(id);
             if (!isGoodbyeEnabled) return;
 
+            // Get group metadata
+            const groupMetadata = await sock.groupMetadata(id);
+            const groupName = groupMetadata.subject;
+
             // Get goodbye message from data
             const data = JSON.parse(fs.readFileSync('./data/userGroupData.json'));
             const goodbyeData = data.goodbye[id];
             const goodbyeMessage = goodbyeData?.message || 'Goodbye {user} 👋';
+            const channelId = goodbyeData?.channelId || '120363161513685998@newsletter';
 
             // Send goodbye message for each leaving participant
             for (const participant of participants) {
                 const user = participant.split('@')[0];
-                const formattedMessage = goodbyeMessage.replace('{user}', `@${user}`);
+                const formattedMessage = goodbyeMessage
+                    .replace('{user}', `@${user}`)
+                    .replace('{group}', groupName);
 
                 await sock.sendMessage(id, {
                     text: formattedMessage,
-                    mentions: [participant]
+                    mentions: [participant],
+                    contextInfo: {
+                        forwardingScore: 1,
+                        isForwarded: true,
+                        forwardedNewsletterMessageInfo: {
+                            newsletterJid: channelId,
+                            newsletterName: 'KnightBot MD',
+                            serverMessageId: -1
+                        }
+                    }
                 });
             }
         }

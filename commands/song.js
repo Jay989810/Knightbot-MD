@@ -29,64 +29,158 @@ async function songCommand(sock, chatId, message) {
             });
         }
 
+        // Get the first video result
         const video = videos[0];
-        const videoUrl = video.url;
+        const urlYt = video.url;
 
-        // Send loading message
-        await sock.sendMessage(chatId, {
-            text: `*${video.title}*\n\n*Duration:* ${formatDuration(video.duration.seconds)}\n*Views:* ${formatNumber(video.views)}\n\n_Downloading your song..._\n> Knight Bot MD`
-        }, { quoted: message });
-
-        // Create temp directory if it doesn't exist
+        // Prepare temp files
         const tempDir = path.join(__dirname, '../temp');
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir);
         }
-
         const tempFile = path.join(tempDir, `${Date.now()}.mp3`);
         const tempM4a = path.join(tempDir, `${Date.now()}.m4a`);
 
         try {
-            // Try siputzx API first
-            const siputzxRes = await fetch(`https://api.siputzx.my.id/api/d/ytmp3?url=${encodeURIComponent(videoUrl)}`);
+            // Send the thumbnail and info immediately after getting video info
+            if (video.thumbnail) {
+                try {
+                    await sock.sendMessage(chatId, {
+                        image: { url: video.thumbnail },
+                        caption: `*${video.title}*\n\n*Duration:* ${formatDuration(video.duration.seconds)}\n*Views:* ${formatNumber(video.views)}\n\n> *_Downloaded by Knight Bot MD_*`
+                    }, { quoted: message });
+                } catch (thumbErr) {
+                }
+            }
+
+            // Use new siputzx endpoint and include thumbnail
+            const apiUrl = `https://api.siputzx.my.id/api/dl/youtube/mp3?url=${encodeURIComponent(urlYt)}`;
+            const siputzxRes = await fetch(apiUrl, { headers: { 'accept': '*/*' } });
             const siputzxData = await siputzxRes.json();
-            
-            if (siputzxData && siputzxData.data && siputzxData.data.dl) {
-                // Download the file first
-                const response = await fetch(siputzxData.data.dl);
+            let downloadLink = null;
+            if (siputzxData && siputzxData.status && siputzxData.data) {
+                downloadLink = siputzxData.data;
+            }
+            if (downloadLink) {
+                const response = await fetch(downloadLink);
+                if (!response.ok) {
+                    await sock.sendMessage(chatId, { text: 'Failed to download the song file from the server.' }, { quoted: message });
+                    return;
+                }
                 const buffer = await response.buffer();
-                
-                // Write to temp file
+                if (!buffer || buffer.length < 1024) {
+                    await sock.sendMessage(chatId, { text: 'Downloaded file is empty or too small.' }, { quoted: message });
+                    return;
+                }
                 fs.writeFileSync(tempM4a, buffer);
-                
-                // Convert to MP3 with proper WhatsApp-compatible settings
                 await execPromise(`ffmpeg -i "${tempM4a}" -vn -acodec libmp3lame -ac 2 -ab 128k -ar 44100 "${tempFile}"`);
-                
-                // Check file size
                 const stats = fs.statSync(tempFile);
                 if (stats.size < 1024) {
                     throw new Error('Conversion failed');
                 }
-
                 await sock.sendMessage(chatId, {
                     audio: { url: tempFile },
                     mimetype: "audio/mpeg",
                     fileName: `${video.title}.mp3`,
                     ptt: false
                 }, { quoted: message });
-
-                // Clean up temp files
                 setTimeout(() => {
-                    if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-                    if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+                    try {
+                        if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+                        if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+                    } catch {}
                 }, 5000);
                 return;
+            } else {
+                // Fallback to vreden API
+                try {
+                    const vredenUrl = `https://api.vreden.my.id/api/dl/ytmp3?url=${encodeURIComponent(urlYt)}`;
+                    const vredenRes = await fetch(vredenUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    let vredenData;
+                    if (!vredenRes.ok) {
+                        await sock.sendMessage(chatId, {
+                            text: 'Sorry, this song could not be downloaded (fallback API error). Please try another song or try again later.'
+                        }, { quoted: message });
+                        return;
+                    }
+                    const contentType = vredenRes.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const errText = await vredenRes.text();
+                        await sock.sendMessage(chatId, {
+                            text: 'Sorry, this song could not be downloaded (fallback API returned invalid content). Please try another song or try again later.'
+                        }, { quoted: message });
+                        return;
+                    }
+                    try {
+                        vredenData = await vredenRes.json();
+                    } catch (jsonErr) {
+                        await sock.sendMessage(chatId, {
+                            text: 'Sorry, this song could not be downloaded (fallback API invalid response). Please try another song or try again later.'
+                        }, { quoted: message });
+                        return;
+                    }
+                    if (
+                        vredenData &&
+                        vredenData.status === 200 &&
+                        vredenData.result &&
+                        vredenData.result.status === true &&
+                        vredenData.result.download &&
+                        vredenData.result.download.status === true &&
+                        vredenData.result.download.url
+                    ) {
+                        const vredenDownloadUrl = vredenData.result.download.url;
+                        const vredenFilename = vredenData.result.download.filename || `${video.title}.mp3`;
+                        const response = await fetch(vredenDownloadUrl);
+                        if (!response.ok) {
+                            await sock.sendMessage(chatId, { text: 'Failed to download the song file from the fallback server.' }, { quoted: message });
+                            return;
+                        }
+                        const buffer = await response.buffer();
+                        if (!buffer || buffer.length < 1024) {
+                            await sock.sendMessage(chatId, { text: 'Downloaded file is empty or too small (fallback).' }, { quoted: message });
+                            return;
+                        }
+                        fs.writeFileSync(tempM4a, buffer);
+                        await execPromise(`ffmpeg -i "${tempM4a}" -vn -acodec libmp3lame -ac 2 -ab 128k -ar 44100 "${tempFile}"`);
+                        const stats = fs.statSync(tempFile);
+                        if (stats.size < 1024) {
+                            throw new Error('Conversion failed (fallback)');
+                        }
+                        await sock.sendMessage(chatId, {
+                            audio: { url: tempFile },
+                            mimetype: "audio/mpeg",
+                            fileName: vredenFilename,
+                            ptt: false
+                        }, { quoted: message });
+                        setTimeout(() => {
+                            try {
+                                if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+                                if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+                            } catch {}
+                        }, 5000);
+                        return;
+                    } else {
+                        await sock.sendMessage(chatId, {
+                            text: 'Sorry, this song could not be downloaded. Please try another song or try again later.'
+                        }, { quoted: message });
+                        return;
+                    }
+                } catch (vredenErr) {
+                    await sock.sendMessage(chatId, {
+                        text: 'Sorry, this song could not be downloaded. Please try another song or try again later.'
+                    }, { quoted: message });
+                    return;
+                }
             }
         } catch (e1) {
-            console.error('Error with siputzx API:', e1);
             try {
                 // Try zenkey API as fallback
-                const zenkeyRes = await fetch(`https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}`);
+                const zenkeyRes = await fetch(`https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(urlYt)}`);
                 const zenkeyData = await zenkeyRes.json();
                 
                 if (zenkeyData && zenkeyData.result && zenkeyData.result.downloadUrl) {
@@ -113,18 +207,20 @@ async function songCommand(sock, chatId, message) {
                         ptt: false
                     }, { quoted: message });
 
-                    // Clean up temp files
+                    // Clean up temp files after a delay to ensure WhatsApp has read the file
                     setTimeout(() => {
-                        if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-                        if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+                        try {
+                            if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+                            if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+                        } catch (cleanupErr) {
+                        }
                     }, 5000);
                     return;
                 }
             } catch (e2) {
-                console.error('Error with zenkey API:', e2);
                 try {
                     // Try axeel API as last resort
-                    const axeelRes = await fetch(`https://api.axeel.my.id/api/download/ytmp3?apikey=axeel&url=${encodeURIComponent(videoUrl)}`);
+                    const axeelRes = await fetch(`https://api.axeel.my.id/api/download/ytmp3?apikey=axeel&url=${encodeURIComponent(urlYt)}`);
                     const axeelData = await axeelRes.json();
                     
                     if (axeelData && axeelData.result && axeelData.result.downloadUrl) {
@@ -151,23 +247,24 @@ async function songCommand(sock, chatId, message) {
                             ptt: false
                         }, { quoted: message });
 
-                        // Clean up temp files
+                        // Clean up temp files after a delay to ensure WhatsApp has read the file
                         setTimeout(() => {
-                            if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-                            if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+                            try {
+                                if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+                                if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+                            } catch (cleanupErr) {
+                            }
                         }, 5000);
                         return;
                     }
                 } catch (e3) {
-                    console.error('Error with axeel API:', e3);
                     throw new Error("All download methods failed");
                 }
             }
         }
     } catch (error) {
-        console.error('Error in song command:', error);
         await sock.sendMessage(chatId, { 
-            text: "Failed to download the song. Please try again later or try a different song."
+            text: "Download failed. Please try again later."
         });
     }
 }
