@@ -6,7 +6,7 @@ async function helpCommand(sock, chatId, message) {
     const helpMessage = `
 ╔═══════════════════╗
    *🤖 ${settings.botName || 'KnightBot-MD'}*  
-   Version: *${settings.version || '2.0.2'}*
+   Version: *${settings.version || '2.0.5'}*
    by ${settings.botOwner || 'Mr Unique Hacker'}
    YT : ${global.ytch}
 ╚═══════════════════╝
@@ -143,6 +143,8 @@ async function helpCommand(sock, chatId, message) {
 ║ ➤ .instagram <link>
 ║ ➤ .facebook <link>
 ║ ➤ .tiktok <link>
+║ ➤ .video <song name>
+║ ➤ .ytmp4 <Link>
 ╚═══════════════════╝
 
 ╔═══════════════════╗

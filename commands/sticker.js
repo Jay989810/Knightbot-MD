@@ -7,29 +7,31 @@ const webp = require('node-webpmux');
 const crypto = require('crypto');
 
 async function stickerCommand(sock, chatId, message) {
-    let mediaMessage;
-
-    if (message.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-        const quoted = message.message.extendedTextMessage.contextInfo;
-        mediaMessage = quoted.quotedMessage.imageMessage || quoted.quotedMessage.videoMessage || quoted.quotedMessage.documentMessage;
+    // The message that will be quoted in the reply.
+    const messageToQuote = message;
     
-        message = {
+    // The message object that contains the media to be downloaded.
+    let targetMessage = message;
+
+    // If the message is a reply, the target media is in the quoted message.
+    if (message.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+        // We need to build a new message object for downloadMediaMessage to work correctly.
+        const quotedInfo = message.message.extendedTextMessage.contextInfo;
+        targetMessage = {
             key: {
                 remoteJid: chatId,
-                fromMe: false,
-                id: quoted.stanzaId,
-                participant: quoted.participant || chatId
+                id: quotedInfo.stanzaId,
+                participant: quotedInfo.participant
             },
-            message: quoted.quotedMessage
+            message: quotedInfo.quotedMessage
         };
-    } else {
-        mediaMessage = message.message?.imageMessage || message.message?.videoMessage || message.message?.documentMessage;
     }
-    
+
+    const mediaMessage = targetMessage.message?.imageMessage || targetMessage.message?.videoMessage || targetMessage.message?.documentMessage;
 
     if (!mediaMessage) {
         await sock.sendMessage(chatId, { 
-            text: 'Please reply to an image, video or GIF to create a sticker.',
+            text: 'Please reply to an image/video with .sticker, or send an image/video with .sticker as the caption.',
             contextInfo: {
                 forwardingScore: 999,
                 isForwarded: true,
@@ -39,12 +41,12 @@ async function stickerCommand(sock, chatId, message) {
                     serverMessageId: -1
                 }
             }
-        },{ quoted: message });
+        },{ quoted: messageToQuote });
         return;
     }
 
     try {
-        const mediaBuffer = await downloadMediaMessage(message, 'buffer', {}, { 
+        const mediaBuffer = await downloadMediaMessage(targetMessage, 'buffer', {}, { 
             logger: undefined, 
             reuploadRequest: sock.updateMediaMessage 
         });
@@ -126,7 +128,7 @@ async function stickerCommand(sock, chatId, message) {
         // Send the sticker
         await sock.sendMessage(chatId, { 
             sticker: finalBuffer
-        },{ quoted: message });
+        },{ quoted: messageToQuote });
 
         // Cleanup temp files
         try {

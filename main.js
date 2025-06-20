@@ -93,6 +93,7 @@ const { goodnightCommand } = require('./commands/goodnight');
 const { shayariCommand } = require('./commands/shayari');
 const { rosedayCommand } = require('./commands/roseday');
 const imagineCommand = require('./commands/imagine');
+const videoCommand = require('./commands/video');
 
 
 // Global settings
@@ -137,13 +138,20 @@ async function handleMessages(sock, messageUpdate, printLog) {
         const senderId = message.key.participant || message.key.remoteJid;
         const isGroup = chatId.endsWith('@g.us');
 
-        let userMessage = message.message?.conversation?.trim().toLowerCase() ||
-            message.message?.extendedTextMessage?.text?.trim().toLowerCase() || '';
-        userMessage = userMessage.replace(/\.\s+/g, '.').trim();
+        const userMessage = (
+            message.message?.conversation?.trim() ||
+            message.message?.extendedTextMessage?.text?.trim() ||
+            message.message?.imageMessage?.caption?.trim() ||
+            message.message?.videoMessage?.caption?.trim() ||
+            ''
+        ).toLowerCase().replace(/\.\\s+/g, '.').trim();
 
         // Preserve raw message for commands like .tag that need original casing
         const rawText = message.message?.conversation?.trim() ||
-            message.message?.extendedTextMessage?.text?.trim() || '';
+            message.message?.extendedTextMessage?.text?.trim() ||
+            message.message?.imageMessage?.caption?.trim() ||
+            message.message?.videoMessage?.caption?.trim() ||
+            '';
 
         // Only log command usage
         if (userMessage.startsWith('.')) {
@@ -721,6 +729,9 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 break;
             case userMessage.startsWith('.play') || userMessage.startsWith('.mp3') || userMessage.startsWith('.ytmp3') || userMessage.startsWith('.yts'):
                 await songCommand(sock, chatId, message);
+                break;
+            case userMessage.startsWith('.video') || userMessage.startsWith('.ytmp4'):
+                await videoCommand(sock, chatId, message);
                 break;
             case userMessage.startsWith('.tiktok') || userMessage.startsWith('.tt'):
                 await tiktokCommand(sock, chatId, message);
