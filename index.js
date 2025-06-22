@@ -219,9 +219,11 @@ async function startXeonBotInc() {
         // Clean the phone number - remove any non-digit characters
         phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
 
-        // Ensure number starts with country code
-        if (!phoneNumber.startsWith('62') && !phoneNumber.startsWith('91')) {
-            phoneNumber = '62' + phoneNumber // Default to Indonesia if no country code
+        // Validate the phone number using awesome-phonenumber
+        const pn = require('awesome-phonenumber');
+        if (!pn('+' + phoneNumber).isValid()) {
+            console.log(chalk.red('Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, etc.) without + or spaces.'));
+            process.exit(1);
         }
 
         setTimeout(async () => {
