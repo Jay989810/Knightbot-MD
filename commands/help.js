@@ -6,7 +6,7 @@ async function helpCommand(sock, chatId, message) {
     const helpMessage = `
 ╔═══════════════════╗
    *🤖 ${settings.botName || 'KnightBot-MD'}*  
-   Version: *${settings.version || '2.0.5'}*
+   Version: *${settings.version || '3.0.0'}*
    by ${settings.botOwner || 'Mr Unique Hacker'}
    YT : ${global.ytch}
 ╚═══════════════════╝
@@ -34,6 +34,7 @@ async function helpCommand(sock, chatId, message) {
 ║ ➤ .trt <text> <lang>
 ║ ➤ .ss <link>
 ║ ➤ .jid
+║ ➤ .url
 ╚═══════════════════╝ 
 
 ╔═══════════════════╗
@@ -52,25 +53,37 @@ async function helpCommand(sock, chatId, message) {
 ║ ➤ .clear
 ║ ➤ .tag <message>
 ║ ➤ .tagall
+║ ➤ .tagnotadmin
+║ ➤ .hidetag <message>
 ║ ➤ .chatbot
 ║ ➤ .resetlink
 ║ ➤ .antitag <on/off>
 ║ ➤ .welcome <on/off>
 ║ ➤ .goodbye <on/off>
+║ ➤ .setgdesc <description>
+║ ➤ .setgname <new name>
+║ ➤ .setgpp (reply to image)
 ╚═══════════════════╝
 
 ╔═══════════════════╗
 🔒 *Owner Commands*:
-║ ➤ .mode
-║ ➤ .autostatus
+║ ➤ .mode <public/private>
 ║ ➤ .clearsession
 ║ ➤ .antidelete
 ║ ➤ .cleartmp
 ║ ➤ .update
+║ ➤ .settings
 ║ ➤ .setpp <reply to image>
-║ ➤ .autoreact
+║ ➤ .autoreact <on/off>
+║ ➤ .autostatus <on/off>
+║ ➤ .autostatus react <on/off>
 ║ ➤ .autotyping <on/off>
 ║ ➤ .autoread <on/off>
+║ ➤ .anticall <on/off>
+║ ➤ .pmblocker <on/off/status>
+║ ➤ .pmblocker setmsg <text>
+║ ➤ .setmention <reply to msg/media>
+║ ➤ .mention <on/off>
 ╚═══════════════════╝
 
 ╔═══════════════════╗
@@ -85,6 +98,8 @@ async function helpCommand(sock, chatId, message) {
 ║ ➤ .meme
 ║ ➤ .take <packname> 
 ║ ➤ .emojimix <emj1>+<emj2>
+║ ➤ .igs <insta link>
+║ ➤ .igsc <insta link>
 ╚═══════════════════╝  
 
 ╔═══════════════════╗
@@ -114,6 +129,7 @@ async function helpCommand(sock, chatId, message) {
 ║ ➤ .gemini <question>
 ║ ➤ .imagine <prompt>
 ║ ➤ .flux <prompt>
+║ ➤ .sora <prompt>
 ╚═══════════════════╝
 
 ╔═══════════════════╗
@@ -157,6 +173,7 @@ async function helpCommand(sock, chatId, message) {
 📥 *Downloader*:
 ║ ➤ .play <song_name>
 ║ ➤ .song <song_name>
+║ ➤ .spotify <query>
 ║ ➤ .instagram <link>
 ║ ➤ .facebook <link>
 ║ ➤ .tiktok <link>
