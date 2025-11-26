@@ -14,6 +14,13 @@ This is a WhatsApp bot built using the Baileys library for group management, inc
   </a> 
 </div>
 
+<div align="center">
+  <img src="https://img.shields.io/github/followers/mruniquehacker?style=for-the-badge&label=Followers" alt="Followers"/>
+  <img src="https://img.shields.io/github/stars/mruniquehacker/Knightbot-MD?style=for-the-badge&label=Stars" alt="Stars"/>
+  <img src="https://img.shields.io/github/forks/mruniquehacker/Knightbot-MD?style=for-the-badge&label=Forks" alt="Forks"/>
+  <img src="https://img.shields.io/github/watchers/mruniquehacker/Knightbot-MD?style=for-the-badge&label=Watchers" alt="Watchers"/>
+</div>
+
 ---
 
 ## 🚀 Steps to Deploy
@@ -66,7 +73,7 @@ For further customization and setup guidance, click the button below:
   </a>
 </div>
 
-### Deploy Now on Below Panel
+### Deploy on Below Panel
 <div align="center">
 <a href="https://dashboard.katabump.com/auth/login#d6b7d6" target="_blank">
   <img src="https://img.shields.io/badge/Katabump-D6B7D6?style=for-the-badge&logo=server&logoColor=black" alt="Katabump"/>
