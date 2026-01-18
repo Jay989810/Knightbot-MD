@@ -1,11 +1,6 @@
 const axios = require('axios');
 const yts = require('yt-search');
 
-// Izumi API configuration
-const izumi = {
-    baseURL: "https://izumiiiiiiii.dpdns.org"
-};
-
 const AXIOS_DEFAULTS = {
     timeout: 60000,
     headers: {
@@ -29,11 +24,17 @@ async function tryRequest(getter, attempts = 3) {
     throw lastError;
 }
 
-async function getIzumiVideoByUrl(youtubeUrl) {
-    const apiUrl = `${izumi.baseURL}/downloader/youtube?url=${encodeURIComponent(youtubeUrl)}&format=720`;
+async function getYupraVideoByUrl(youtubeUrl) {
+    const apiUrl = `https://api.yupra.my.id/api/downloader/ytmp4?url=${encodeURIComponent(youtubeUrl)}`;
     const res = await tryRequest(() => axios.get(apiUrl, AXIOS_DEFAULTS));
-    if (res?.data?.result?.download) return res.data.result; // { download, title, ... }
-    throw new Error('Izumi video api returned no download');
+    if (res?.data?.success && res?.data?.data?.download_url) {
+        return {
+            download: res.data.data.download_url,
+            title: res.data.data.title,
+            thumbnail: res.data.data.thumbnail
+        };
+    }
+    throw new Error('Yupra returned no download');
 }
 
 async function getOkatsuVideoByUrl(youtubeUrl) {
@@ -96,10 +97,10 @@ async function videoCommand(sock, chatId, message) {
             return;
         }
 
-        // Get video: try Izumi first, then Okatsu fallback
+        // Get video: try Yupra first, then Okatsu fallback
         let videoData;
         try {
-            videoData = await getIzumiVideoByUrl(videoUrl);
+            videoData = await getYupraVideoByUrl(videoUrl);
         } catch (e1) {
             videoData = await getOkatsuVideoByUrl(videoUrl);
         }
